@@ -1,0 +1,3 @@
+{:deps
+ {overtone/overtone {:local/root "/home/arne/Overtone/overtone"}
+  seesaw/seesaw {:mvn/version "1.5.0"}}}
