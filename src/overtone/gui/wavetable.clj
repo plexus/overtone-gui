@@ -20,9 +20,9 @@
           h (height c)
           line-style (style :foreground "#FFFFFF" :stroke 1.0 :cap :round :dashes [10.0 20.0])
           data (if wavetable?
-                 (wavetable->signal (buffer-data buf))
-                 (buffer-data buf))
-                 x-array (int-array w)
+                 (wavetable->signal (buffer-read buf))
+                 (buffer-read buf))
+          x-array (int-array w)
           y-array (int-array w)
           step (/ (:size buf) w (if wavetable? 2 1))
           y-scale h] ;(- h (* 2 WAVE-Y-PADDING))]
@@ -32,7 +32,7 @@
       (dotimes [i w]
         (aset ^ints x-array i i)
         (aset ^ints y-array i (int (* y-scale 0.5
-                                (+ 1.0 (* -1 (nth data (unchecked-multiply i step))))))))
+                                      (+ 1.0 (* -1 (nth data (unchecked-multiply i step))))))))
 
       (.setColor g (color 0 140 236))
       (.setStroke g (stroke :width 2.0))
@@ -82,22 +82,22 @@
               step (/ buf-size (float w))
               [last-x last-y] @last-drag
 
-              ; Convert from pixel y-value, (inverted 0-height) to
-              ; an amplitude between -1 and 1
+              ;; Convert from pixel y-value, (inverted 0-height) to
+              ;; an amplitude between -1 and 1
               cy-val (pixel-y-to-amplitude cy h)
 
               buf-data (if wavetable?
-                         (wavetable->signal (buffer-data buf))
-                         (buffer-data buf))
+                         (wavetable->signal (buffer-read buf))
+                         (buffer-read buf))
 
-              ; Determine the left-most, center, and right-most points
+              ;; Determine the left-most, center, and right-most points
               [x1 x2 x3] (if (> cx last-x)
                            [last-x cx (inc cx)]
                            [(dec cx) cx last-x])
               x1 (max x1 0)
               x3 (min x3 (dec w))
 
-              ; Convert from pixel space to buffer index
+              ;; Convert from pixel space to buffer index
               x1-idx (int (Math/floor (* x1 step)))
               x2-idx (int (Math/floor (* x2 step)))
               x3-idx (int (Math/floor (* x3 step)))
@@ -113,12 +113,12 @@
             (buffer-write! buf (* 2 x1-idx) (signal->wavetable y-vals))
             (buffer-write! buf x1-idx y-vals))
 
-          ; repaint from the root so thumbnails get redrawn too
+          ;; repaint from the root so thumbnails get redrawn too
           (.repaint (to-root source))))
       (reset! last-drag [cx cy]))
-        (catch Exception ex
-          (warn (str "Error in drag-handler:" ex))
-          (.printStackTrace ex))))
+    (catch Exception ex
+      (warn (str "Error in drag-handler:" ex))
+      (.printStackTrace ex))))
 
 (defn- editor-press-handler
   [last-drag event]
@@ -159,10 +159,10 @@
         panels (map #(config! % :class :thumbnail) panels)
         panels (partition 2 (interleave panels (repeat "height 60, width 80")))]
     (scrollable
-      (mig-panel :constraints ["gap 2px" "" ""]
-                 :items panels)
-      :vscroll :never
-      :hscroll :as-needed)))
+     (mig-panel :constraints ["gap 2px" "" ""]
+                :items panels)
+     :vscroll :never
+     :hscroll :as-needed)))
 
 (defn- add-thumbnail-behavior
   [root update-fn]
@@ -178,9 +178,9 @@
      (try
        (let [editor  (waveform-editor-panel (first (:waveforms table)) true)
              split (top-bottom-split
-                     editor
-                     (wavetable-thumbnailer table)
-                     :divider-location 0.8)
+                    editor
+                    (wavetable-thumbnailer table)
+                    :divider-location 0.8)
              change-wave-fn (fn [buf]
                               (invoke-later
                                 (try

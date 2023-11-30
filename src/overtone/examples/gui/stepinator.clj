@@ -1,6 +1,6 @@
 (ns overtone.examples.gui.stepinator
-  (:use overtone.live
-        overtone.gui.stepinator))
+  (:use [overtone.live]
+        [overtone.gui.stepinator]))
 
 (def example-steps [2 4 -5 -10 -10 2 -3 0])
 (def pstep (stepinator :steps 8 :values example-steps))

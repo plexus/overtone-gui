@@ -14,9 +14,9 @@
         to-max   (double to-max)
         v        (double v)]
     (+ to-min
-     (* (/ (- v from-min)
-           (- from-max from-min))
-        (- to-max to-min)))))
+       (* (/ (- v from-min)
+             (- from-max from-min))
+          (- to-max to-min)))))
 
 (defn- to-screen [dim {:keys [get-value min max]}]
   (scale-val [min max]
@@ -33,21 +33,21 @@
         z (to-screen [50 255] (:z point))
         r (to-screen [15 35] (:z point))]
     (draw g
-        (circle x y r)
-        (style :background (color (:color point) (max 40 (int z)))))))
+          (circle x y r)
+          (style :background (color (:color point) (max 40 (int z)))))))
 
 (defn- paint-surface
   [state c g]
   (paint-point state c g)
   (draw g
-    (string-shape 5 15 (str "x: " (get-in state [:x :name])))
-    (style :foreground :darkgrey)
+        (string-shape 5 15 (str "x: " (get-in state [:x :name])))
+        (style :foreground :darkgrey)
 
-    (string-shape 5 30 (str "y: " (get-in state [:y :name])))
-    (style :foreground :darkgrey)
+        (string-shape 5 30 (str "y: " (get-in state [:y :name])))
+        (style :foreground :darkgrey)
 
-    (string-shape 5 45 (str "z: " (get-in state [:z :name])))
-    (style :foreground :darkgrey)))
+        (string-shape 5 45 (str "z: " (get-in state [:z :name])))
+        (style :foreground :darkgrey)))
 
 (defn- handle-move-event [state e]
   (if (or (mouse/button-down? e :left)
@@ -85,10 +85,10 @@
   []
   (let [v (atom 0.0)]
     {:name ""
-    :get-value (fn [] @v)
-    :set-value (fn [new-val] (reset! v new-val))
-    :min 0.0
-    :max 1.0}))
+     :get-value (fn [] @v)
+     :set-value (fn [new-val] (reset! v new-val))
+     :min 0.0
+     :max 1.0}))
 
 (defn surface-panel [x y z]
   (let [state {:color :blue
@@ -103,9 +103,9 @@
                  :initial-value c
                  :start? true :delay 100 :initial-delay 1)]
     (listen c
-      #{:mouse-moved :mouse-dragged}  (partial handle-move-event state)
-      :mouse-pressed  (partial handle-press-event state t)
-      :mouse-released (partial handle-release-event state t))
+            #{:mouse-moved :mouse-dragged}  (partial handle-move-event state)
+            :mouse-pressed  (partial handle-press-event state t)
+            :mouse-released (partial handle-release-event state t))
     [c t]))
 
 
@@ -146,10 +146,10 @@
         timers (map second p-and-t)
         f (frame :title "Surfaces"
                  :content (grid-panel
-                            :columns (int (Math/ceil (Math/sqrt (count panels))))
-                            :border 5 :hgap 5 :vgap 5
-                            :background :black
-                            :items panels))]
+                           :columns (int (Math/ceil (Math/sqrt (count panels))))
+                           :border 5 :hgap 5 :vgap 5
+                           :background :black
+                           :items panels))]
     (listen f :window-closed (fn [_]
                                (doseq [t timers] (.stop t))))
     (-> f pack! show!)))
@@ -163,22 +163,22 @@
   ([synth id name]
    (let [param (some #(if (= name (:name %)) %) (:params synth))
          value (atom (:min param))]
-     {  :name (str (:name synth) "/" id "/" name)
-        :get-value (fn []  @value)
-        :set-value #(ctl id name (reset! value %))
-        :min (:min param)
-        :max (:max param)}))
+     {:name (str (:name synth) "/" id "/" name)
+      :get-value (fn []  @value)
+      :set-value #(ctl id name (reset! value %))
+      :min (:min param)
+      :max (:max param)}))
   ([synth name]
    (let [param (some #(if (= name (:name %)) %) (:params synth))]
-     { :name (str (:name synth) "/" name)
+     {:name (str (:name synth) "/" name)
       :get-value (fn []  @(:value param))
       :set-value #(reset! (:value param) %)
       :min (:min param)
       :max (:max param)})))
 
 (comment
-  ; Set up a sequencer with some drum sounds. Hook some drum params
-  ; to a couple surfaces.
+                                        ; Set up a sequencer with some drum sounds. Hook some drum params
+                                        ; to a couple surfaces.
   (do
     (use 'overtone.live)
     (use 'overtone.gui.sequencer)
@@ -187,11 +187,11 @@
     (def m (metronome 128))
     (step-sequencer m 11 [kick closed-hat open-hat snare])
     (surface-grid [(synth-param snare "freq") (synth-param kick "freq") (synth-param snare "sustain")]
-              [(synth-param closed-hat "low") (synth-param closed-hat "hi") (synth-param closed-hat "t")]
-              [(synth-param open-hat "low") (synth-param open-hat "hi") (synth-param open-hat "t")]
-              [(synth-param kick "freq-decay") (synth-param kick "amp-decay") (synth-param snare "decay")]))
+                  [(synth-param closed-hat "low") (synth-param closed-hat "hi") (synth-param closed-hat "t")]
+                  [(synth-param open-hat "low") (synth-param open-hat "hi") (synth-param open-hat "t")]
+                  [(synth-param kick "freq-decay") (synth-param kick "amp-decay") (synth-param snare "decay")]))
 
-  ; Set up two sin waves and control their frequencies with a surface.
+                                        ; Set up two sin waves and control their frequencies with a surface.
   (do
     (use 'overtone.live)
     (use 'overtone.gui.surface)
@@ -203,4 +203,3 @@
     (surface (synth-param harmony h "freq1")
              (synth-param harmony h "freq2")
              (synth-param harmony h "amp") )))
-

@@ -1,8 +1,11 @@
 (ns overtone.gui.info
   (:use overtone.libs.event
-        [overtone.sc info server mixer]
+        [overtone.studio.mixer]
+        [overtone.sc info server]
         [seesaw core border table chooser color])
   (:require [seesaw.bind :as bind]))
+
+(set! *warn-on-reflection* true)
 
 (native!)
 
@@ -83,8 +86,8 @@
   []
   (let [init-val (int (* (volume) 100.0))
         slide (slider :value init-val :min 0 :max 120 :orientation :vertical
-                    :major-tick-spacing 10 :paint-ticks? true)
-        spin (spinner :model (spinner-model init-val :from 0 :to 120 :by 1))
+                      :major-tick-spacing 10 :paint-ticks? true)
+        spin (spinner :model (javax.swing.SpinnerNumberModel. init-val 0 120 1)) ; v from to step
         record-btn (button :id :record-button :text "Record" :background (color :lightgreen))
         panel (vertical-panel :id :volume-ctl :items [slide spin record-btn])]
     (bind/bind spin slide)
@@ -96,10 +99,10 @@
   [btn]
   (println "toggling recording")
   (if (not (recording?))
-      (choose-file :type :save
-                   :success-fn (fn [fc file]
-                                 (recording-start (.getAbsolutePath file))
-                                 (invoke-later (config! btn :background (color :red)))))
+    (choose-file :type :save
+                 :success-fn (fn [fc file]
+                               (recording-start (.getAbsolutePath ^java.io.File file))
+                               (invoke-later (config! btn :background (color :red)))))
     (do
       (recording-stop)
       (invoke-later (config! btn :background (color :lightgreen))))))
@@ -119,18 +122,17 @@
   []
   (invoke-now
     (-> (frame
-          :title "Overtone"
-          :size  [500 :by 200]
-          :on-close :dispose
-          :menubar (menubar :items [(menu :text "View" :items [(menu-item :class :refresh)])])
-          :content (border-panel
-                     :border 5
-                     :hgap 5
-                     :vgap 5
-                     ;:north  (make-toolbar)
-                     :center (make-tabs)
-                     :east (make-master-controls)
-                     :south (label :id :status :text "Ready")))
-      (add-behaviors)
-      (show!))))
-
+         :title "Overtone"
+         :size  [500 :by 200]
+         :on-close :dispose
+         :menubar (menubar :items [(menu :text "View" :items [(menu-item :class :refresh)])])
+         :content (border-panel
+                   :border 5
+                   :hgap 5
+                   :vgap 5
+                                        ;:north  (make-toolbar)
+                   :center (make-tabs)
+                   :east (make-master-controls)
+                   :south (label :id :status :text "Ready")))
+        (add-behaviors)
+        (show!))))

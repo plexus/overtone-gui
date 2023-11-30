@@ -36,3 +36,5 @@
   (surface (synth-param harmony h "freq1")
            (synth-param harmony h "freq2")
            (synth-param harmony h "amp")))
+
+(a)

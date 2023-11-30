@@ -4,10 +4,10 @@
         [overtone.config log])
   (:require [seesaw.bind :as bind]
             [seesaw.font :as font])
-  (:import [java.awt Color Paint Stroke BasicStroke GradientPaint
-            LinearGradientPaint RadialGradientPaint]
-           [java.awt.geom Point2D$Float Point2D$Double CubicCurve2D$Double QuadCurve2D GeneralPath]
-           [java.lang.Math]))
+  (:import (java.awt Color Paint Stroke BasicStroke GradientPaint
+                     LinearGradientPaint RadialGradientPaint)
+           (java.awt.geom Point2D$Float Point2D$Double CubicCurve2D$Double QuadCurve2D GeneralPath)
+           (java.lang Math)))
 
 (def ^{:private true} step-style
   (style

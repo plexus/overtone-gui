@@ -4,8 +4,9 @@
         overtone.gui.scope))
 
 (pscope)
-(spectrogram :bus 0 :keep-on-top true)
 
-;(demo 10 (sin-osc (* 2000 (+ 1 (sin-osc:kr 0.2)))))
+(demo 10 (sin-osc 200))
 
-;(rise-fall-pad 660)
+;;(rise-fall-pad 660)
+
+#_(spectrogram 0)

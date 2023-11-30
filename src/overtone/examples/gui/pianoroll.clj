@@ -12,5 +12,5 @@
                       :measures 1 :beats-per-measure 4
                       :steps-per-beat 4))
 
-; Currently set notes can be retrieved like this:
-; (:notes @(:state roll))
+                                        ; Currently set notes can be retrieved like this:
+                                        ; (:notes @(:state roll))

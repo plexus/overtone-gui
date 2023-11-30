@@ -1,7 +1,6 @@
-(ns
-    ^{:doc "An oscilloscope style waveform viewer"
-      :author "Jeff Rose & Sam Aaron"}
-  overtone.gui.scope
+(ns overtone.gui.scope
+  "An oscilloscope style waveform viewer"
+  {:author "Jeff Rose & Sam Aaron"}
   (:import [java.awt Graphics Dimension Color BasicStroke BorderLayout RenderingHints]
            [java.awt.event WindowListener ComponentListener]
            [java.awt.geom Rectangle2D$Float Path2D$Float]
@@ -11,6 +10,7 @@
         [overtone.helpers lib]
         [overtone.libs event deps]
         [overtone.sc defaults server synth ugens buffer node]
+        [overtone.sc.foundation-groups]
         [overtone.studio.util])
   (:require [clojure.set :as set]
             [overtone.config.log :as log]
@@ -30,18 +30,8 @@
 (on-deps :studio-setup-completed
          ::create-scope-group #(dosync
                                 (ref-set scope-group*
-                                         (group :tail (main-monitor-group)))
+                                         (group :tail (foundation-monitor-group)))
                                 (satisfy-deps :scope-group-created)))
-
-(defn- ensure-internal-server!
-  "Throws an exception if the server isn't internal - scope relies on fast
-  access to shared buffers with the server which is currently only available
-  with the internal server. Also ensures server is connected."
-  []
-  (when (server-disconnected?)
-    (throw (Exception. "Cannot use scopes until a server has been booted or connected")))
-  (when (external-server?)
-    (throw (Exception. (str "Sorry, it's  only possible to use scopes with an internal server. Your server connection info is as follows: " (connection-info))))))
 
 (defn- update-scope-data
   "Updates the scope by reading the current status of the buffer and repainting.
@@ -51,7 +41,7 @@
   sooner. Need to remove this limitation when scsynth-jna is fixed."
   [s]
   (let [{:keys [buf size width height panel y-arrays x-array panel]} s
-        frames    (if @(:update? s) (buffer-data buf) @(:frames s))
+        frames    (if @(:update? s) (buffer-read buf) @(:frames s))
         step      (/ (buffer-size buf) width)
         y-scale   (- height (* 2 Y-PADDING))
         [y-a y-b] @y-arrays]
@@ -118,7 +108,6 @@
   "Schedule the scope to be updated every (/ 1000 FPS) ms (unless the scopes are
   already running in which case it does nothing."
   []
-  (ensure-internal-server!)
   (dosync
    (when-not @scopes-running?*
      (at-at/every (/ 1000 FPS) update-scopes scope-pool :desc "Scope refresh fn")
@@ -145,14 +134,13 @@
 (defn scopes-stop
   "Stop all scopes from running."
   []
-  (ensure-internal-server!)
   (at-at/stop-and-reset-pool! scope-pool)
   (empty-scope-data)
   (dosync (ref-set scopes-running?* false)))
 
 (defn- start-bus-synth
   [bus buf]
-  (bus->buf :target @scope-group* bus buf))
+  (bus->buf [:tail @scope-group*] bus buf))
 
 (defn- scope-bus
   "Set a bus to view in the scope."
@@ -256,24 +244,21 @@
       :or {bus 0
            buf -1
            keep-on-top false}}]
-     (ensure-internal-server!)
-     (let [buf (if (buffer? buf) (:id buf) buf)
-           kind (if (= -1 buf) :bus :buf)
-           num  (if (= -1 buf) bus buf)
-           s (mk-scope num kind keep-on-top WIDTH HEIGHT)]
-       (dosync (alter scopes* assoc (:id s) s))
-       (scopes-start))))
+   (let [buf (if (buffer? buf) (:id buf) buf)
+         kind (if (= -1 buf) :bus :buf)
+         num  (if (= -1 buf) bus buf)
+         s (mk-scope num kind keep-on-top WIDTH HEIGHT)]
+     (dosync (alter scopes* assoc (:id s) s))
+     (scopes-start))))
 
 (defn pscope
   "Creates a 'perminent' scope, i.e. one where the window is always kept on top of other OS windows. See scope."
   ([& args]
-     (ensure-internal-server!)
-     (apply scope (concat args [:keep-on-top true]))))
+   (apply scope (concat args [:keep-on-top true]))))
 
 (defn- reset-scopes
   "Restart scopes if they have already been running"
   []
-  (ensure-internal-server!)
   (dosync
    (ref-set scopes*
             (reduce (fn [new-scopes [k v]]
@@ -286,13 +271,10 @@
    (scopes-start)))
 
 
-(on-deps #{:synthdefs-loaded :scope-group-created} ::reset-scopes #(when (internal-server?)
-                                                                     (reset-scopes)))
+(on-deps #{:synthdefs-loaded :scope-group-created} ::reset-scopes #(reset-scopes))
 (on-sync-event :shutdown (fn [event-info]
-                           (when (internal-server?)
-                             (scopes-stop)
-                             (dorun
-                              (map (fn [s] scope-close s) @scopes*))))
+                           (dorun
+                            (map (fn [s] scope-close s) @scopes*)))
                ::stop-scopes)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -319,12 +301,6 @@
       (bus->buf 20 (:id b))
       (bus->bus 20 0)))
 
-  (defn- spectrogram [in-bus]
-    (let [fft-buf (buffer 2048)
-          buf (buffer 2048)]
-      (Thread/sleep 100)
-      (freq-scope-zero in-bus fft-buf buf)))
-
   (defn test-scope []
     (if (not (server-connected?))
       (do
@@ -338,30 +314,31 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;; Spectragraph stuff to be worked on
+
+;; Note: The fft ugen writes into a buffer:
+;; dc, nyquist, real, imaginary, real, imaginary....
 (comment
-                                        ; Note: The fft ugen writes into a buffer:
-                                        ; dc, nyquist, real, imaginary, real, imaginary....
-  (comment defn- update-scope []
-           (let [{:keys [buf width height panel]} @scope*
-                 frames  (buffer-data buf)
-                 n-reals (/ (- (:size buf) 2) 2)
-                 step    (int (/ n-reals width))
-                 y-scale (/ (- height (* 2 Y-PADDING)) 2)
-                 y-shift (+ (/ height 2) Y-PADDING)]
-             (dotimes [x width]
-               (aset ^ints y-array x
-                     (int (+ y-shift
-                             (* y-scale
-                                (aget ^floats frames
-                                      (+ 2 (* 2 (unchecked-multiply x step))))))))))
-           (.repaint (:panel @scope*)))
+  (defn- update-scope [id]
+    (let [{:keys [buf width height panel]} (get @scopes* id)
+          frames  (buffer-read buf)
+          n-reals (/ (- (:size buf) 2) 2)
+          step    (int (/ n-reals width))
+          y-scale (/ (- height (* 2 Y-PADDING)) 2)
+          y-shift (+ (/ height 2) Y-PADDING)]
+      (dotimes [x width]
+        (aset ^ints y-array x
+              (int (+ y-shift
+                      (* y-scale
+                         (aget ^floats frames
+                               (+ 2 (* 2 (unchecked-multiply x step))))))))))
+    (.repaint (:panel @scope*)))
 
   (defsynth freq-scope-zero [in-bus 0 fft-buf 0 scope-buf 1
                              rate 4 phase 1 db-factor 0.02]
     (let [n-samples (* 0.5 (- (buf-samples:kr fft-buf) 2))
           signal (in in-bus)
-          freqs  (fft fft-buf signal 0.75 :hann)
-                                        ;        chain  (pv-mag-smear fft-buf 1)
+          freqs  (fft fft-buf signal 0.75 HANN)
+          ;;        chain  (pv-mag-smear fft-buf 1)
           phasor (+ (+ n-samples 2)
                     (* n-samples
                        (lf-saw (/ rate (buf-dur:kr fft-buf)) phase)))
@@ -369,19 +346,16 @@
       (scope-out (* db-factor (ampdb (* 0.00285 (buf-rd 1 fft-buf phasor 1 1))))
                  scope-buf)))
 
-
   (defsynth freqs [in-bus 10 fft-buf 0]
     (let [n-samples (* 0.5 (- (buf-samples:kr fft-buf) 2))
           signal    (in in-bus 1)]
-      (fft fft-buf signal 0.75 :hann)))
-
-
+      (fft fft-buf signal 0.75 HANN)))
 
   (defsynth scoper-outer [buf 0]
     (scope-out (sin-osc 200) buf))
-  (scope-out)
 
-  (defn freq-scope-buf [buf]
-    )
-
-  )
+  (defn spectrogram [in-bus]
+    (let [fft-buf (buffer 2048)
+          buf (buffer 2048)]
+      (Thread/sleep 100)
+      (freq-scope-zero in-bus fft-buf buf))))
