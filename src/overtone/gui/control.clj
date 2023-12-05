@@ -63,30 +63,30 @@
 (defn synth-controller-panel
   [synth]
   (let [full-params (filter #(not (or (= :none (:type %))
-                                        (nil? (:min %))
-                                        (nil? (:max %))
-                                        (nil? (:step %))))
-                              (:params synth))]
-      (if (zero? (count full-params))
-        (do
-          (alert (str "The '" (:name synth) "'"
+                                      (nil? (:min %))
+                                      (nil? (:max %))
+                                      (nil? (:step %))))
+                            (:params synth))]
+    (if (zero? (count full-params))
+      (do
+        (alert (str "The '" (:name synth) "'"
                     " synth or instrument does not have any parameters"
                     " with the required meta-data. "
                     " (e.g.  [freq {:default 80 :min 40 :max 880 :step 1}])"))
-          {:synth synth
-           :panel (label :text "Missing parameters" :border (:name synth))
-           :cleanup (fn [])})
-        (let [control-panes (map
-                              (fn [{:keys [name default min max step value]}]
-                                (control-slider name min max step value))
-                              full-params)
-              cleanup       (apply juxt (map second control-panes))
-              panel (mig-panel :constraints ["" "[right][center][center]" ""]
-                               :items (mapcat first control-panes)
-                               :border (:name synth))]
-          {:synth synth
-           :panel panel
-           :cleanup cleanup}))))
+        {:synth synth
+         :panel (label :text "Missing parameters" :border (:name synth))
+         :cleanup (fn [])})
+      (let [control-panes (map
+                           (fn [{:keys [name default min max step value]}]
+                             (control-slider name min max step value))
+                           full-params)
+            cleanup       (apply juxt (map second control-panes))
+            panel (mig-panel :constraints ["" "[right][center][center]" ""]
+                             :items (mapcat first control-panes)
+                             :border (:name synth))]
+        {:synth synth
+         :panel panel
+         :cleanup cleanup}))))
 
 (defn synth-controller
   "Create a GUI for the given synths or instruments.  Each synth must have sufficient
